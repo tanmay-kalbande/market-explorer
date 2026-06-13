@@ -58,8 +58,8 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  // Cache on Vercel CDN for 1 hour (3600 seconds)
-  res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
+  // Cache on Vercel CDN for 24 hours (86400 seconds)
+  res.setHeader('Cache-Control', 's-maxage=86400, stale-while-revalidate');
   res.setHeader('Content-Type', 'application/json');
 
   const url = 'https://companiesmarketcap.com/?download=csv';
