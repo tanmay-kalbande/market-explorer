@@ -99,7 +99,10 @@ module.exports = async function handler(req, res) {
       }));
 
     const now = new Date();
-    const fetchedAt = now.toISOString().replace('T', ' ').substring(0, 16) + ' UTC';
+    // Convert to IST (UTC + 5.5 hours)
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(now.getTime() + istOffset);
+    const fetchedAt = istTime.toISOString().replace('T', ' ').substring(0, 16) + ' IST';
 
     res.status(200).json({
       fetchedAt,
