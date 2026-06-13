@@ -1188,6 +1188,13 @@ function squarify(items, x, y, w, h){
   const total = items.reduce((a,b)=>a+b.value,0);
   if(total <= 0) return result;
 
+  // Scale values so that their sum equals the area of the container (w * h)
+  const containerArea = w * h;
+  const scaledItems = items.map(item => ({
+    ...item,
+    value: (item.value / total) * containerArea
+  }));
+
   function layout(items, x, y, w, h){
     if(items.length === 0) return;
     if(items.length === 1){
@@ -1244,7 +1251,7 @@ function squarify(items, x, y, w, h){
     );
   }
 
-  layout(items, x, y, w, h);
+  layout(scaledItems, x, y, w, h);
   return result;
 }
 
