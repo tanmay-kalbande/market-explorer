@@ -1,9 +1,43 @@
 <!DOCTYPE html>
+<!--
+   ======================================================================
+                      __  __          _____  _  _  ______ _______ 
+                     |  \/  |   /\   |  __ \| |/ /|  ____|__   __|
+                     | \  / |  /  \  | |__) | ' / | |__     | |   
+                     | |\/| | / /\ \ |  _  /|  <  |  __|    | |   
+                     | |  | |/ ____ \| | \ \| . \ | |____   | |   
+                     |_|  |_/_/    \_\_|  \_\_|\_\|______|  |_|   
+                     
+                    REAL-TIME GLOBAL MARKET CAPITALIZATION EXPLORER
+   ======================================================================
+   
+   Hey there, fellow developer! Inspecting the source code, are we? 😉
+   Hope you enjoy this sleek glassmorphic treemap & sankey flow visualization!
+   
+   Built with pure vanilla JS, CSS custom properties, and zero dependencies.
+   
+   "The stock market is a device for transferring money from the active
+    to the patient." — Warren Buffett (mostly)
+    
+   "And the console is a device for fixing bugs you didn't know you had." 
+    — Some tired developer at 3 AM.
+    
+   Check out the source code at: https://github.com/tanmay-kalbande/market-explorer
+   
+   Happy coding! ◈
+   ======================================================================
+-->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MARKETCAP// Explorer</title>
+<meta name="description" content="Explore live global stock market capitalizations in real-time. Interactive treemaps, sankey flow diagrams, and lists tracking the world's most valuable companies.">
+<meta name="keywords" content="stock market, market cap, companies, valuation, financial dashboard, live stock tracker, treemap, sankey diagram">
+<meta name="author" content="Market Explorer">
+<meta property="og:title" content="MARKETCAP // Real-time Global Market Capitalization Explorer">
+<meta property="og:description" content="Explore live global stock market capitalizations with an interactive glassmorphic treemap, sankey flow, and search dashboard.">
+<meta property="og:type" content="website">
+<title>MARKETCAP // Live Global Market Capitalization Explorer</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
@@ -906,7 +940,7 @@
   <div class="header">
     <div class="logo">
       <span class="logo-mark" aria-hidden="true">◈</span>
-      <div class="logo-text">MARKET<span>CAP</span>//</div>
+      <h1 class="logo-text">MARKET<span>CAP</span>//</h1>
     </div>
     <div class="header-tag"><span class="dot"></span>EXPLORING <span id="hdr-count">...</span> COMPANIES</div>
     <div class="header-stats">
@@ -1263,6 +1297,7 @@ function renderTreemap(filtered){
 
   const rect = treemapEl.getBoundingClientRect();
   const W = rect.width, H = rect.height;
+  if (W <= 0 || H <= 0) return;
 
   const MAX_TILES = 120;
   let items = filtered.slice();
