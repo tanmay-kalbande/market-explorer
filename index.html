@@ -466,6 +466,17 @@
     position:absolute;
     inset: 10px;
     overflow:hidden;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: scale(0.985) translateY(4px);
+    transition: opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1), transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.24s;
+  }
+  #treemap.active-view, #sankeymap.active-view, #listview.active-view{
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: scale(1) translateY(0);
   }
   #listview{ overflow-y:auto; padding-right: 6px; }
   #listview::-webkit-scrollbar{ width:4px; }
@@ -946,7 +957,7 @@
   <div class="header">
     <div class="logo">
       <span class="logo-mark" aria-hidden="true">◈</span>
-      <h1 class="logo-text">MARKET<span>CAP</span>//</h1>
+      <h1 class="logo-text">Market<span>Cap</span>//</h1>
     </div>
     <div class="header-tag"><span class="dot"></span>EXPLORING <span id="hdr-count">...</span> COMPANIES</div>
     <div class="header-stats">
@@ -1024,6 +1035,15 @@
 </div>
 
 <script>
+function esc(str) {
+  if (!str) return '';
+  return str.toString()
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 let RAW = [];
 let TOTAL_MCAP = 0;
 let countryCounts = {};
@@ -1183,7 +1203,7 @@ function renderCountryList(){
     const row = document.createElement('div');
     row.className = 'country-row' + (state.activeCountries.has(c) ? ' active' : '');
     row.innerHTML = `<span class="country-swatch" style="background:${countryColor[c]}"></span>
-                      <span class="country-name">${c}</span>
+                      <span class="country-name">${esc(c)}</span>
                       <span class="country-count">${countryCounts[c]}</span>`;
     row.addEventListener('click', ()=>{
       if(state.activeCountries.has(c)){
@@ -1202,11 +1222,11 @@ function renderCountryList(){
 const tooltip = document.getElementById('tooltip');
 function showTooltip(e, d){
   if(d.c === '__OTHER__'){
-    tooltip.innerHTML = `<b>${d.n}</b>
+    tooltip.innerHTML = `<b>${esc(d.n)}</b>
       <div class="tt-sub">${fmtMoney(d.m)} combined valuation · Consolidated market tail</div>`;
   } else {
-    tooltip.innerHTML = `<b>${d.n}</b> <span style="color:var(--text-faint)">${d.s}</span>
-      <div class="tt-sub">${fmtMoney(d.m)} · Rank #${d.r} · ${d.c}</div>`;
+    tooltip.innerHTML = `<b>${esc(d.n)}</b> <span style="color:var(--text-faint)">${esc(d.s)}</span>
+      <div class="tt-sub">${fmtMoney(d.m)} · Rank #${d.r} · ${esc(d.c)}</div>`;
   }
   tooltip.style.display = 'block';
   positionTooltip(e);
@@ -1361,7 +1381,7 @@ function renderTreemap(filtered){
       cell.style.textAlign = 'center';
       cell.classList.remove('tiny');
       cell.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;align-items:center;padding:10px;">
-          <div class="cell-name" style="white-space:normal;font-size:11px;color:var(--text-dim)">${d.n}</div>
+          <div class="cell-name" style="white-space:normal;font-size:11px;color:var(--text-dim)">${esc(d.n)}</div>
           <div class="cell-sub" style="color:var(--gold);font-size:12px;font-weight:700">${fmtMoney(d.m)} combined</div>
           <div class="cell-sub" style="color:var(--text-faint)">the long tail</div>
         </div>`;
@@ -1375,7 +1395,7 @@ function renderTreemap(filtered){
       return;
     }
 
-    cell.innerHTML = `<div class="cell-name">${d.n}</div><div class="cell-sub">${fmtMoney(d.m)} · ${d.s}</div>`;
+    cell.innerHTML = `<div class="cell-name">${esc(d.n)}</div><div class="cell-sub">${fmtMoney(d.m)} · ${esc(d.s)}</div>`;
     if(state.selected && state.selected.s === d.s && state.selected.n === d.n) cell.classList.add('selected');
 
     cell.addEventListener('mouseenter', e=>showTooltip(e,d));
@@ -1578,7 +1598,7 @@ function renderSankey(filtered){
     const labelDiv = document.createElement('div');
     labelDiv.className = 'sankey-label left-label';
     labelDiv.style.top = (n.y + n.height / 2 - 8) + 'px';
-    labelDiv.innerHTML = `<span><b>${n.name}</b><span class="val">${fmtMoneyShort(n.value)}</span></span>`;
+    labelDiv.innerHTML = `<span><b>${esc(n.name)}</b><span class="val">${fmtMoneyShort(n.value)}</span></span>`;
 
     const handleSelect = () => {
       if (n.isOther) return;
@@ -1595,7 +1615,7 @@ function renderSankey(filtered){
       el.addEventListener('click', handleSelect);
       el.addEventListener('mouseenter', (e) => {
         highlightLinks(n.id);
-        tooltip.innerHTML = `<b>${n.name}</b><br>Combined Cap: <span style="color:var(--gold)">${fmtMoney(n.value)}</span>`;
+        tooltip.innerHTML = `<b>${esc(n.name)}</b><br>Combined Cap: <span style="color:var(--gold)">${fmtMoney(n.value)}</span>`;
         tooltip.style.display = 'block';
         positionTooltip(e);
       });
@@ -1633,13 +1653,13 @@ function renderSankey(filtered){
         <div class="company-logo-wrapper" style="width: 16px; height:16px;">
           <div class="company-logo-placeholder" style="background: var(--panel-2); font-size:7px;">+</div>
         </div>
-        <span><b>${n.name}</b><span class="val">${fmtMoneyShort(n.value)}</span></span>
+        <span><b>${esc(n.name)}</b><span class="val">${fmtMoneyShort(n.value)}</span></span>
       `;
       
       [nodeDiv, labelDiv].forEach(el => {
         el.addEventListener('mouseenter', (e) => {
           highlightLinks(n.id);
-          tooltip.innerHTML = `<b>${n.name}</b><br>Combined Cap: <span style="color:var(--gold)">${fmtMoney(n.value)}</span>`;
+          tooltip.innerHTML = `<b>${esc(n.name)}</b><br>Combined Cap: <span style="color:var(--gold)">${fmtMoney(n.value)}</span>`;
           tooltip.style.display = 'block';
           positionTooltip(e);
         });
@@ -1653,10 +1673,10 @@ function renderSankey(filtered){
       const logoUrl = getCompanyLogoUrl(n.d);
       labelDiv.innerHTML = `
         <div class="company-logo-wrapper" style="width: 18px; height:18px;">
-          <div class="company-logo-placeholder" style="background: ${countryColor[n.d.c] || 'var(--border)'}; font-size:7.5px;">${n.ticker.slice(0,2)}</div>
+          <div class="company-logo-placeholder" style="background: ${countryColor[n.d.c] || 'var(--border)'}; font-size:7.5px;">${esc(n.ticker.slice(0,2))}</div>
           <img class="company-logo-img" src="${logoUrl}" onerror="this.style.display='none';" />
         </div>
-        <span><b>${n.ticker}</b> <span style="color:var(--text-faint); font-size:9px;">${n.name.slice(0, 14)}</span><span class="val">${fmtMoneyShort(n.value)}</span></span>
+        <span><b>${esc(n.ticker)}</b> <span style="color:var(--text-faint); font-size:9px;">${n.name.slice(0, 14)}</span><span class="val">${fmtMoneyShort(n.value)}</span></span>
       `;
 
       const handleSelect = () => selectCompany(n.d);
@@ -1699,14 +1719,14 @@ function renderList(filtered){
       <div class="lr-rank">#${d.r}</div>
       <div class="lr-name">
         <div class="company-logo-wrapper" style="width:18px; height:18px;">
-          <div class="company-logo-placeholder" style="background: ${countryColor[d.c] || 'var(--border)'}; font-size:7.5px;">${d.s.slice(0,2)}</div>
+          <div class="company-logo-placeholder" style="background: ${countryColor[d.c] || 'var(--border)'}; font-size:7.5px;">${esc(d.s.slice(0,2))}</div>
           <img class="company-logo-img" src="${logoUrl}" onerror="this.style.display='none';" />
         </div>
-        <div class="lr-name-text"><b>${d.n}</b><span class="sym">${d.s}</span></div>
+        <div class="lr-name-text"><b>${esc(d.n)}</b><span class="sym">${esc(d.s)}</span></div>
       </div>
       <div class="lr-mcap">${fmtMoney(d.m)}</div>
       <div class="lr-price">$${d.p.toFixed(2)}</div>
-      <div class="lr-country"><span class="sw" style="background:${countryColor[d.c]}"></span>${d.c}</div>
+      <div class="lr-country"><span class="sw" style="background:${countryColor[d.c]}"></span>${esc(d.c)}</div>
     `;
     row.addEventListener('click', ()=> selectCompany(d));
     listEl.appendChild(row);
@@ -1751,7 +1771,7 @@ function renderDetail(){
           <div class="company-logo-placeholder" style="background: var(--panel-2); font-size:1.4rem; font-weight:700; border: 1px dashed var(--border-light)">◈</div>
         </div>
         <div>
-          <div class="dc-name" style="font-size:17px; line-height: 1.2;">${d.n}</div>
+          <div class="dc-name" style="font-size:17px; line-height: 1.2;">${esc(d.n)}</div>
           <div class="dc-sym" style="color:var(--text-dim)">Consolidated Tail-end</div>
         </div>
       </div>
@@ -1795,11 +1815,11 @@ function renderDetail(){
         <img class="company-logo-img" src="${logoUrl}" onerror="this.style.display='none';" />
       </div>
       <div>
-        <div class="dc-name" style="font-size:20px;">${d.n}</div>
-        <div class="dc-sym">${d.s}</div>
+        <div class="dc-name" style="font-size:20px;">${esc(d.n)}</div>
+        <div class="dc-sym">${esc(d.s)}</div>
       </div>
     </div>
-    <div class="dc-country"><span class="sw" style="background:${countryColor[d.c]}"></span>${d.c} · #${countryRank} of ${countryN}</div>
+    <div class="dc-country"><span class="sw" style="background:${countryColor[d.c]}"></span>${esc(d.c)} · #${countryRank} of ${countryN}</div>
 
     <div class="dc-divider"></div>
 
@@ -1819,7 +1839,7 @@ function renderDetail(){
       <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.min(Math.max(pctOfTotal*8,1.5),100)}%"></div></div>
     </div>
     <div class="dc-bar-wrap">
-      <div class="dc-bar-label"><span>% OF ${d.c.toUpperCase()} TOTAL</span><span>${pctOfCountry.toFixed(1)}%</span></div>
+      <div class="dc-bar-label"><span>% OF ${esc(d.c.toUpperCase())} TOTAL</span><span>${pctOfCountry.toFixed(1)}%</span></div>
       <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.min(pctOfCountry,100)}%"></div></div>
     </div>
 
@@ -1827,7 +1847,7 @@ function renderDetail(){
 
     <div class="dc-context">
       <div class="row"><span>Global Rank</span><span class="v">#${d.r} of ${fmtNum(RAW.length)}</span></div>
-      <div class="row"><span>Country Rank (${d.c})</span><span class="v">#${countryRank} of ${fmtNum(countryN)}</span></div>
+      <div class="row"><span>Country Rank (${esc(d.c)})</span><span class="v">#${countryRank} of ${fmtNum(countryN)}</span></div>
       <div class="row"><span>Share of Country Cap</span><span class="v">${pctOfCountry < 0.01 ? '<0.01' : pctOfCountry.toFixed(2)}%</span></div>
     </div>
   `;
@@ -1839,7 +1859,7 @@ function renderLegend(filtered){
   const totals = {};
   filtered.forEach(d=> totals[d.c] = (totals[d.c]||0) + d.m);
   const top = Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,5);
-  legend.innerHTML = top.map(([c])=>`<span class="legend-item"><span class="legend-sw" style="background:${countryColor[c]}"></span>${c}</span>`).join('');
+  legend.innerHTML = top.map(([c])=>`<span class="legend-item"><span class="legend-sw" style="background:${countryColor[c]}"></span>${esc(c)}</span>`).join('');
 }
 
 /* ===================== STATS ===================== */
@@ -1876,9 +1896,9 @@ document.querySelectorAll('.view-toggle button').forEach(btn=>{
     btn.classList.add('active');
     state.view = btn.dataset.view;
 
-    document.getElementById('treemap').classList.toggle('hidden', state.view!=='treemap');
-    document.getElementById('sankeymap').classList.toggle('hidden', state.view!=='sankey');
-    document.getElementById('listview').classList.toggle('hidden', state.view!=='list');
+    document.getElementById('treemap').classList.toggle('active-view', state.view==='treemap');
+    document.getElementById('sankeymap').classList.toggle('active-view', state.view==='sankey');
+    document.getElementById('listview').classList.toggle('active-view', state.view==='list');
     document.querySelector('.bg-grid').classList.toggle('hidden', state.view === 'list');
 
     const labels = {treemap:'TREEMAP', sankey:'SANKEY FLOW', list:'LIST'};
@@ -1957,7 +1977,7 @@ async function init() {
     
     // Hide loader and show active view
     document.getElementById('loader').classList.add('hidden');
-    document.getElementById(state.view).classList.remove('hidden');
+    document.getElementById(state.view).classList.add('active-view');
     
     // Set headers
     document.getElementById('country-shown-count').textContent = countries.length;
