@@ -1268,14 +1268,29 @@ function renderTreemap(filtered){
     othersCount = rest.length;
   }
 
-  const data = shown.map(d=>({value:d.m, d}));
+  let tiles = [];
   if(othersCount > 0){
-    data.push({value: othersValue, d: {n:`+ ${fmtNum(othersCount)} smaller companies`, s:'', m: othersValue, c:'__OTHER__', r:null, count:othersCount}});
+    const individualSum = shown.reduce((a,b)=>a+b.m,0);
+    const othersWidth = (othersValue / (individualSum + othersValue)) * W;
+    const individualWidth = W - othersWidth;
+
+    // 1. Layout others block on the left
+    tiles.push({
+      x: 0,
+      y: 0,
+      w: othersWidth,
+      h: H,
+      d: {n:`+ ${fmtNum(othersCount)} smaller companies`, s:'', m: othersValue, c:'__OTHER__', r:null, count:othersCount}
+    });
+
+    // 2. Layout individual companies on the right
+    const individualData = shown.map(d=>({value:d.m, d}));
+    const rightTiles = squarify(individualData, othersWidth, 0, individualWidth, H);
+    tiles = tiles.concat(rightTiles);
+  } else {
+    const data = shown.map(d=>({value:d.m, d}));
+    tiles = squarify(data, 0, 0, W, H);
   }
-
-  data.sort((a,b)=>b.value - a.value);
-
-  const tiles = squarify(data, 0, 0, W, H);
 
   tiles.forEach(t=>{
     const d = t.d;
