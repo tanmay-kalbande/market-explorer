@@ -1,0 +1,1907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MARKETCAP// Explorer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #0b0a0d;
+    --panel: rgba(18, 15, 12, 0.85);
+    --panel-2: rgba(28, 22, 18, 0.9);
+    --panel-solid: #141210;
+    --border: rgba(42, 36, 30, 0.7);
+    --border-light: rgba(58, 50, 42, 0.8);
+    --glass: rgba(255,255,255,0.03);
+    --glass-border: rgba(255,255,255,0.07);
+    --text: #f0ede8;
+    --text-dim: #8a8175;
+    --text-faint: #54493e;
+    --gold: #d4b896;
+    --gold-dim: #8a6a42;
+    --gold-glow: rgba(212,184,150,0.18);
+    --green: #7a9b7e;
+    --red: #b86b5a;
+    --mono: 'JetBrains Mono', 'SF Mono', 'Roboto Mono', ui-monospace, monospace;
+  }
+
+  *{ margin:0; padding:0; box-sizing:border-box; }
+
+  html, body{
+    height:100%;
+    overflow:hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body{
+    background: radial-gradient(ellipse 120% 80% at 60% -10%, rgba(180,130,80,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse 80% 80% at 0% 100%, rgba(60,80,140,0.05) 0%, transparent 55%),
+                #0b0a0d;
+  }
+
+  /* ── Background layers ── */
+  .bg-wrapper{
+    position:fixed; inset:0;
+    overflow:hidden; pointer-events:none; z-index:0;
+  }
+  .bg-grain{
+    position:absolute; inset:0; opacity:0.055;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+  .bg-grid{
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
+  }
+  .bg-orb{
+    position:absolute; border-radius:50%;
+    filter:blur(100px); pointer-events:none; z-index:0;
+  }
+  .bg-orb-a{
+    width:55vw; height:55vw;
+    background: radial-gradient(circle, rgba(180,140,100,0.10) 0%, transparent 70%);
+    top:-15vw; right:-10vw;
+    animation: orbDrift 22s ease-in-out infinite alternate;
+  }
+  .bg-orb-b{
+    width:45vw; height:45vw;
+    background: radial-gradient(circle, rgba(80,100,160,0.08) 0%, transparent 70%);
+    bottom:-10vw; left:-8vw;
+    animation: orbDrift 28s ease-in-out infinite alternate-reverse;
+  }
+  .bg-orb-c{
+    width:30vw; height:30vw;
+    background: radial-gradient(circle, rgba(100,180,140,0.06) 0%, transparent 70%);
+    top:40%; left:40%;
+    animation: orbDrift 18s ease-in-out infinite alternate;
+  }
+  @keyframes orbDrift{
+    0%  { transform: translate(0,0) scale(1); }
+    100%{ transform: translate(3vw,4vh) scale(1.08); }
+  }
+
+  /* outer frame border */
+  .frame{
+    position:fixed;
+    inset:0;
+    border: 1px solid rgba(212,184,150,0.12);
+    pointer-events:none;
+    z-index: 50;
+  }
+
+  .app{
+    position:relative;
+    z-index:1;
+    height:100vh;
+    width:100vw;
+    display:grid;
+    grid-template-columns: 300px 1fr 320px;
+    grid-template-rows: 48px 1fr 30px;
+    grid-template-areas:
+      "header header header"
+      "sidebar main detail"
+      "footer footer footer";
+    gap: 0;
+  }
+
+  /* ============ HEADER ============ */
+  .header{
+    grid-area: header;
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(14, 12, 10, 0.75);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.3);
+  }
+
+  .logo{
+    display:flex;
+    align-items:center;
+    gap: 0.65rem;
+  }
+  .logo-mark{
+    font-size: 1.6rem;
+    color: var(--gold);
+    opacity: 0.9;
+    line-height: 1;
+    filter: drop-shadow(0 0 6px rgba(212,184,150,0.4));
+  }
+  .logo-text{
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: #c8c2ba;
+  }
+  .logo-text span{ color: var(--gold); }
+
+  .header-tag{
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    border: 1px solid var(--glass-border);
+    background: var(--glass);
+    padding: 4px 11px;
+    border-radius: 999px;
+    display:flex;
+    align-items:center;
+    gap: 7px;
+  }
+  .header-tag .dot{
+    width:5px; height:5px;
+    border-radius:50%;
+    background: var(--gold);
+    box-shadow: 0 0 6px var(--gold);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{ opacity:1; box-shadow: 0 0 6px var(--gold); }
+    50%{ opacity:0.6; box-shadow: 0 0 12px var(--gold); }
+  }
+
+  .header-stats{
+    display:flex;
+    gap: 22px;
+    align-items: center;
+  }
+  .hstat{
+    text-align:right;
+  }
+  .hstat .v{
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+  .hstat .l{
+    font-size: 8.5px;
+    letter-spacing: 0.18em;
+    color: var(--text-faint);
+    margin-top: 1px;
+  }
+
+  /* ============ SIDEBAR ============ */
+  .sidebar{
+    grid-area: sidebar;
+    border-right: 1px solid var(--glass-border);
+    padding: 16px;
+    display:flex;
+    flex-direction:column;
+    gap: 14px;
+    overflow:hidden;
+    background: rgba(12, 10, 8, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .panel-label{
+    font-size: 10px;
+    letter-spacing: 0.24em;
+    color: var(--gold-dim);
+    display:flex;
+    align-items:center;
+    gap: 8px;
+  }
+  .panel-label::before{
+    content:'◇';
+    color: var(--gold);
+    font-size: 10px;
+  }
+
+  .search-wrap{
+    position:relative;
+  }
+  .search-input{
+    width:100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    padding: 10px 14px 10px 32px;
+    border-radius: 6px;
+    outline:none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+  .search-input::placeholder{ color: var(--text-faint); }
+  .search-input:focus{
+    border-color: rgba(212,184,150,0.4);
+    background: rgba(255,255,255,0.05);
+    box-shadow: 0 0 0 3px rgba(212,184,150,0.08), inset 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .search-icon{
+    position:absolute;
+    left:10px; top:50%;
+    transform: translateY(-50%);
+    color: var(--text-faint);
+    font-size: 13px;
+    pointer-events:none;
+  }
+
+  .view-toggle{
+    display:flex;
+    gap: 3px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 7px;
+    padding: 3px;
+  }
+  .view-toggle button{
+    flex:1;
+    background: transparent;
+    border:none;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    padding: 7px 4px;
+    border-radius: 5px;
+    cursor:pointer;
+    transition: all 0.18s;
+  }
+  .view-toggle button.active{
+    background: linear-gradient(135deg, var(--gold-dim), var(--gold));
+    color: #0b0a0d;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(212,184,150,0.25), 0 1px 0 rgba(255,255,255,0.12) inset;
+  }
+  .view-toggle button:not(.active):hover{
+    color: var(--text);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .field-group{
+    display:flex;
+    flex-direction:column;
+    gap: 8px;
+  }
+  .field-row{
+    display:flex;
+    justify-content: space-between;
+    align-items:baseline;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+  }
+  .field-row .val{
+    color: var(--gold);
+    font-weight:700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+  }
+
+  input[type=range]{
+    width:100%;
+    -webkit-appearance:none;
+    height: 2px;
+    background: var(--border-light);
+    border-radius: 2px;
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:12px; height:12px;
+    border-radius:50%;
+    background: var(--gold);
+    cursor:pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 1px var(--gold-dim);
+  }
+
+  .country-list{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap: 2px;
+    padding-right: 4px;
+  }
+  .country-list::-webkit-scrollbar{ width:5px; }
+  .country-list::-webkit-scrollbar-thumb{ background: var(--border-light); border-radius:3px; }
+  .country-list::-webkit-scrollbar-track{ background: transparent; }
+
+  .country-row{
+    display:flex;
+    align-items:center;
+    gap: 8px;
+    padding: 5px 6px;
+    border-radius: 3px;
+    cursor:pointer;
+    font-size: 11px;
+    transition: background 0.1s;
+    user-select:none;
+  }
+  .country-row:hover{ background: var(--panel-2); }
+  .country-row.active{ background: var(--panel-2); }
+  .country-swatch{
+    width:9px; height:9px;
+    border-radius:2px;
+    flex-shrink:0;
+  }
+  .country-name{
+    flex:1;
+    color: var(--text);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .country-row.active .country-name{ color: var(--gold); font-weight:700; }
+  .country-count{
+    color: var(--text-faint);
+    font-size: 10px;
+  }
+
+  .reset-btn{
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--glass-border);
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    padding: 9px;
+    border-radius: 6px;
+    cursor:pointer;
+    transition: all 0.18s;
+    text-align:center;
+  }
+  .reset-btn:hover{
+    border-color: rgba(212,184,150,0.4);
+    color: var(--gold);
+    background: rgba(212,184,150,0.06);
+    box-shadow: 0 0 14px rgba(212,184,150,0.1);
+  }
+
+  /* ============ MAIN ============ */
+  .main{
+    grid-area: main;
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .main-header{
+    padding: 12px 20px 10px;
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    border-bottom: 1px solid var(--glass-border);
+    background: rgba(12, 10, 8, 0.3);
+  }
+  .main-title{
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .main-title span{ color: var(--gold); }
+  .main-sub{
+    font-size: 10.5px;
+    color: var(--text-faint);
+    letter-spacing: 0.05em;
+  }
+
+  .viz-area{
+    flex:1;
+    position:relative;
+    overflow:hidden;
+    padding: 10px;
+  }
+
+  #treemap, #sankeymap, #listview{
+    position:absolute;
+    inset: 10px;
+    overflow:hidden;
+  }
+  #listview{ overflow-y:auto; padding-right: 6px; }
+  #listview::-webkit-scrollbar{ width:4px; }
+  #listview::-webkit-scrollbar-thumb{ background: rgba(58,50,42,0.5); border-radius:3px; }
+  #listview::-webkit-scrollbar-track{ background: transparent; }
+
+  .hidden{ display:none !important; }
+
+  /* Loader styling */
+  .loader-container{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    background: rgba(11, 10, 13, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 100;
+    border: 1px solid var(--glass-border);
+    border-radius: 4px;
+  }
+  .spinner{
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(212,184,150,0.1);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  .loader-text{
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    font-weight: 500;
+  }
+  @keyframes spin{
+    to{ transform: rotate(360deg); }
+  }
+
+  /* treemap cells */
+  .cell{
+    position:absolute;
+    border: 1px solid rgba(0,0,0,0.35);
+    overflow:hidden;
+    cursor:pointer;
+    transition: filter 0.15s, transform 0.1s, box-shadow 0.15s, border-color 0.12s;
+    display:flex;
+    flex-direction:column;
+    justify-content:flex-end;
+    padding: 6px 8px;
+    box-sizing:border-box;
+    border-radius: 2px;
+  }
+  .cell:hover{
+    filter: brightness(1.25);
+    z-index: 10;
+    border-color: var(--gold) !important;
+    box-shadow: 0 0 8px rgba(212,184,150,0.4);
+    transform: scale(1.008);
+  }
+  .cell.selected{
+    filter: brightness(1.3);
+    border: 1.5px solid var(--gold) !important;
+    z-index: 11;
+    box-shadow: 0 0 12px rgba(212,184,150,0.5);
+  }
+  .cell-name{
+    font-size: 10px;
+    font-weight: 700;
+    color: #ffffff;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  .cell-sub{
+    font-size: 8.5px;
+    color: rgba(255,255,255,0.7);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+  }
+  .cell.tiny .cell-name, .cell.tiny .cell-sub{ display:none; }
+
+  /* list view rows */
+  .list-row{
+    display:grid;
+    grid-template-columns: 44px 1fr 90px 90px 120px;
+    align-items:center;
+    gap: 12px;
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    cursor:pointer;
+    font-size: 11.5px;
+    transition: background 0.1s;
+  }
+  .list-row:hover{ background: var(--panel-2); }
+  .list-row.selected{ background: var(--panel-2); border-left: 2px solid var(--gold); }
+  .list-row.head{
+    color: var(--text-faint);
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    cursor:default;
+    position:sticky;
+    top:0;
+    background: var(--bg);
+    z-index: 2;
+  }
+  .list-row.head:hover{ background: var(--bg); }
+  .lr-rank{ color: var(--text-faint); }
+  .lr-name{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    overflow:hidden;
+  }
+  .lr-name-text{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .lr-name b{ color: var(--text); }
+  .lr-name .sym{ color: var(--text-faint); margin-left:6px; font-size:10px; }
+  .lr-mcap{ color: var(--gold); text-align:right; font-weight:700; }
+  .lr-price{ color: var(--text-dim); text-align:right; }
+  .lr-country{
+    display:flex; align-items:center; gap:6px;
+    color: var(--text-dim);
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .lr-country .sw{ width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+
+  /* Sankey Diagram styling */
+  .sankey-link {
+    fill-opacity: 0.15;
+    stroke-opacity: 0;
+    transition: fill-opacity 0.2s, stroke-opacity 0.2s;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  .sankey-link:hover {
+    fill-opacity: 0.55;
+    stroke: var(--gold);
+    stroke-width: 0.5px;
+    stroke-opacity: 0.8;
+  }
+  .sankey-node {
+    position: absolute;
+    width: 12px;
+    border-radius: 2px;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: filter 0.2s, border-color 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .sankey-node:hover {
+    filter: brightness(1.2);
+    border-color: var(--gold);
+  }
+  .sankey-label {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    font-size: 10px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    pointer-events: auto;
+    font-family: var(--mono);
+    line-height: 1.2;
+    z-index: 2;
+  }
+  .sankey-label.left-label {
+    justify-content: flex-end;
+    text-align: right;
+    width: 150px;
+    left: 6px;
+    cursor: pointer;
+  }
+  .sankey-label.right-label {
+    justify-content: flex-start;
+    text-align: left;
+    width: 230px;
+    left: calc(100% - 236px);
+    gap: 8px;
+  }
+  .sankey-label b {
+    color: var(--text);
+    transition: color 0.15s;
+  }
+  .sankey-label.left-label:hover b {
+    color: var(--gold);
+  }
+  .sankey-label.right-label:hover b {
+    color: var(--gold);
+  }
+  .sankey-label .val {
+    color: var(--gold);
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  
+  /* Company Logo Wrapper & Placeholder */
+  .company-logo-wrapper {
+    position: relative;
+    width: 20px; height: 20px;
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--panel-2);
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .company-logo-wrapper.large {
+    width: 42px; height: 42px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .company-logo-placeholder {
+    width: 100%; height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: -0.05em;
+    user-select: none;
+  }
+  .company-logo-img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+    background: #ffffff;
+    display: block;
+  }
+
+  /* ============ DETAIL PANEL ============ */
+  .detail{
+    grid-area: detail;
+    border-left: 1px solid var(--glass-border);
+    padding: 18px;
+    display:flex;
+    flex-direction:column;
+    gap: 14px;
+    overflow-y:auto;
+    background: rgba(10, 8, 7, 0.65);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .detail::-webkit-scrollbar{ width:4px; }
+  .detail::-webkit-scrollbar-thumb{ background: rgba(58,50,42,0.6); border-radius:3px; }
+  .detail::-webkit-scrollbar-track{ background: transparent; }
+
+  .detail-empty{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color: var(--text-faint);
+    gap: 14px;
+    padding: 20px;
+  }
+  .detail-empty .big-mark{
+    font-size: 2.8rem;
+    color: var(--gold);
+    opacity: 0.6;
+    margin-bottom: 8px;
+  }
+  .detail-empty p{
+    font-size: 11px;
+    line-height:1.7;
+    letter-spacing: 0.04em;
+    max-width: 220px;
+  }
+
+  .detail-card{
+    display:flex;
+    flex-direction:column;
+    gap: 14px;
+  }
+  .dc-rank{
+    font-size: 9.5px;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    display: inline-flex;
+    padding: 3px 9px;
+    border-radius: 999px;
+    width: fit-content;
+  }
+  .dc-rank b{ color: var(--gold); }
+  .dc-name{
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--text);
+  }
+  .dc-sym{
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    opacity: 0.85;
+  }
+  .dc-country{
+    display:flex; align-items:center; gap:8px;
+    font-size: 10.5px;
+    color: var(--text-dim);
+  }
+  .dc-country .sw{ width:9px; height:9px; border-radius:2px; }
+
+  .dc-divider{
+    height:1px;
+    background: var(--glass-border);
+    margin: 2px 0;
+  }
+
+  .dc-stat{
+    display:flex;
+    flex-direction:column;
+    gap: 3px;
+    padding: 10px 12px;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+  }
+  .dc-stat .l{
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-faint);
+  }
+  .dc-stat .v{
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .dc-stat .v.gold{ color: var(--gold); }
+
+  .dc-bar-wrap{
+    display:flex;
+    flex-direction:column;
+    gap: 5px;
+  }
+  .dc-bar-label{
+    display:flex;
+    justify-content:space-between;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    color: var(--text-faint);
+  }
+  .dc-bar-track{
+    height: 4px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 4px;
+    overflow:hidden;
+    border: 1px solid var(--glass-border);
+  }
+  .dc-bar-fill{
+    height:100%;
+    background: linear-gradient(90deg, var(--gold-dim), var(--gold));
+    border-radius:4px;
+    box-shadow: 0 0 6px rgba(212,184,150,0.3);
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .dc-context{
+    display:flex;
+    flex-direction:column;
+    gap: 0;
+    font-size: 10.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .dc-context .row{
+    display:flex;
+    justify-content:space-between;
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--glass-border);
+  }
+  .dc-context .row:last-child{ border-bottom: none; }
+  .dc-context .row .v{ color: var(--text); font-weight:600; }
+
+  /* ============ FOOTER ============ */
+  .footer{
+    grid-area: footer;
+    border-top: 1px solid var(--glass-border);
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    padding: 0 20px;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: var(--text-faint);
+    background: rgba(10, 8, 7, 0.7);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  .footer .legend{
+    display:flex;
+    gap: 14px;
+    align-items:center;
+  }
+  .footer .legend-item{
+    display:flex; align-items:center; gap:5px;
+  }
+  .footer .legend-sw{ width:7px; height:7px; border-radius:2px; }
+
+  /* tooltip */
+  .tooltip{
+    position:fixed;
+    pointer-events:none;
+    background: rgba(20, 16, 12, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(212,184,150,0.25);
+    border-radius: 8px;
+    padding: 8px 13px;
+    font-size: 11px;
+    z-index: 100;
+    display:none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04) inset;
+    white-space:nowrap;
+  }
+  .tooltip b{ color: var(--gold); }
+  .tooltip .tt-sub{ color: var(--text-dim); font-size:10px; margin-top:3px; }
+
+  /* responsive collapse for small viewports */
+  @media (max-width: 1100px){
+    .header-tag{ display:none; }
+    .footer #footer-right{ display:none; }
+  }
+  @media (max-width: 900px){
+    .app{
+      grid-template-columns: 240px 1fr 0px;
+      grid-template-areas:
+        "header header header"
+        "sidebar main main"
+        "footer footer footer";
+    }
+    .detail{ display:none; }
+    .header-stats{ gap: 16px; }
+  }
+  @media (max-width: 680px){
+    .header-stats .hstat:nth-child(3){ display:none; }
+  }
+</style>
+</head>
+<body>
+<!-- Background -->
+<div class="bg-wrapper" aria-hidden="true">
+  <div class="bg-grain"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-orb bg-orb-a"></div>
+  <div class="bg-orb bg-orb-b"></div>
+  <div class="bg-orb bg-orb-c"></div>
+</div>
+
+<div class="frame"></div>
+<div class="tooltip" id="tooltip"></div>
+
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <span class="logo-mark" aria-hidden="true">◈</span>
+      <div class="logo-text">MARKET<span>CAP</span>//</div>
+    </div>
+    <div class="header-tag"><span class="dot"></span>EXPLORING <span id="hdr-count">...</span> COMPANIES</div>
+    <div class="header-stats">
+      <div class="hstat"><div class="v" id="stat-total">...</div><div class="l">TOTAL CAP SHOWN</div></div>
+      <div class="hstat"><div class="v" id="stat-shown">...</div><div class="l">COMPANIES SHOWN</div></div>
+      <div class="hstat"><div class="v" id="stat-countries">...</div><div class="l">COUNTRIES</div></div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="panel-label">SEARCH</div>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input class="search-input" id="search" type="text" placeholder="company or ticker..." autocomplete="off">
+    </div>
+
+    <div class="panel-label">VIEW</div>
+    <div class="view-toggle">
+      <button class="active" data-view="treemap">TREEMAP</button>
+      <button data-view="sankey">SANKEY</button>
+      <button data-view="list">LIST</button>
+    </div>
+
+    <div class="panel-label">MARKET CAP FLOOR</div>
+    <div class="field-group">
+      <div class="field-row"><span>MIN VALUE</span><span class="val" id="mcap-val">$0</span></div>
+      <input type="range" id="mcap-slider" min="0" max="100" value="0" step="1">
+    </div>
+
+    <div class="panel-label">COUNTRIES (<span id="country-shown-count">...</span>)</div>
+    <div class="country-list" id="country-list"></div>
+
+    <button class="reset-btn" id="reset-btn">↺ RESET ALL FILTERS</button>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="main-header">
+      <div>
+        <div class="main-title">VIEW: <span id="view-label">TREEMAP</span></div>
+        <div class="main-sub" id="view-sub">Tile size ∝ market capitalization · color = country</div>
+      </div>
+      <div class="main-sub" id="result-count">... results</div>
+    </div>
+    <div class="viz-area">
+      <!-- Loading spinner -->
+      <div id="loader" class="loader-container">
+        <div class="spinner"></div>
+        <div class="loader-text">FETCHING MARKET DATA...</div>
+      </div>
+      <div id="treemap" class="hidden"></div>
+      <div id="sankeymap" class="hidden"></div>
+      <div id="listview" class="hidden"></div>
+    </div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="detail" id="detail">
+    <div class="detail-empty" id="detail-empty">
+      <div class="big-mark">◈</div>
+      <div class="panel-label">NO SELECTION</div>
+      <p>Click any tile or row to inspect a company's rank, valuation, and market context.</p>
+    </div>
+    <div class="detail-card hidden" id="detail-card"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div id="fetched-time" style="color: var(--text-dim);">DATA AS OF: LOADING...</div>
+    <div class="legend" id="legend"></div>
+    <div id="footer-right">CLICK TILE OR FLOW TO SELECT · HOVER TO INSPECT</div>
+  </div>
+
+</div>
+
+<script>
+let RAW = [];
+let TOTAL_MCAP = 0;
+let countryCounts = {};
+let countries = [];
+const countryColor = {};
+
+// hand-tuned distinct hues for top countries, generated spread for the rest
+const fixedHues = {
+  'United States': 358,   // warm red
+  'China': 38,            // amber
+  'Japan': 205,           // blue
+  'India': 280,           // violet
+  'United Kingdom': 165,  // teal-green
+  'Germany': 50,          // yellow
+  'France': 320,          // magenta
+  'Australia': 100,       // olive-green
+  'Saudi Arabia': 18,     // burnt orange
+  'Switzerland': 230,     // indigo
+  'South Korea': 185,     // cyan-teal
+  'Taiwan': 135,          // green
+};
+
+function getCompanyLogoUrl(d) {
+  const overrides = {
+    'GOOG': 'google.com',
+    'GOOGL': 'google.com',
+    'AAPL': 'apple.com',
+    'MSFT': 'microsoft.com',
+    'AMZN': 'amazon.com',
+    'NVDA': 'nvidia.com',
+    'TSLA': 'tesla.com',
+    'META': 'meta.com',
+    'TSM': 'tsmc.com',
+    'AVGO': 'broadcom.com',
+    'SPCX': 'spacex.com',
+    '2222.SR': 'aramco.com',
+    'BRK-B': 'berkshirehathaway.com',
+    'LLY': 'lilly.com',
+    'JPM': 'jpmorgan.com',
+    'UNH': 'unitedhealthgroup.com',
+    'JNJ': 'jnj.com',
+    'V': 'visa.com',
+    'PG': 'pg.com',
+    'XOM': 'exxonmobil.com',
+    'MA': 'mastercard.com',
+    'HD': 'homedepot.com',
+    'CVX': 'chevron.com',
+    'ABBV': 'abbvie.com',
+    'KO': 'cocacola.com',
+    'PEP': 'pepsico.com',
+    'COST': 'costco.com',
+    'BAC': 'bankofamerica.com',
+    'ASML': 'asml.com',
+    'AZN': 'astrazeneca.com',
+    'NVS': 'novartis.com',
+    'TM': 'toyota.com',
+    'SAP': 'sap.com',
+    'TCEHY': 'tencent.com',
+    'BABA': 'alibaba.com',
+    'ADBE': 'adobe.com',
+    'CRM': 'salesforce.com',
+    'ORCL': 'oracle.com',
+    'CSCO': 'cisco.com',
+    'NKE': 'nike.com',
+    'DIS': 'disney.com',
+    'ACN': 'accenture.com',
+    'TXN': 'ti.com',
+    'QCOM': 'qualcomm.com',
+    'INTC': 'intel.com',
+    'AMD': 'amd.com',
+    'VZ': 'verizon.com',
+    'T': 'att.com',
+    'CMCSA': 'comcast.com',
+    'NFLX': 'netflix.com',
+    'UPS': 'ups.com',
+    'SBUX': 'starbucks.com',
+    'AMGN': 'amgen.com',
+    'CAT': 'caterpillar.com',
+    'HON': 'honeywell.com',
+    'IBM': 'ibm.com',
+    'GE': 'ge.com',
+    'PLTR': 'palantir.com',
+    'GS': 'goldmansachs.com',
+    'MS': 'morganstanley.com',
+    'DE': 'deere.com',
+    'UBER': 'uber.com',
+    'ABNB': 'airbnb.com',
+    'SHOP': 'shopify.com',
+    'SPOT': 'spotify.com',
+    'LMT': 'lockheedmartin.com',
+    'RTX': 'rtx.com'
+  };
+
+  let domain = overrides[d.s];
+  if(!domain) {
+    let clean = d.n.toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .replace(/(corp|inc|co|ltd|plc|se|group|platforms|holdings|pharmaceuticals|corporation|bank)$/, '');
+    domain = clean + '.com';
+  }
+  return `https://logo.clearbit.com/${domain}`;
+}
+
+/* ===================== STATE ===================== */
+const state = {
+  search: '',
+  mcapFloor: 0,
+  activeCountries: new Set(),
+  view: 'treemap',
+  selected: null
+};
+
+/* ===================== HELPERS ===================== */
+function fmtMoney(v){
+  if(v >= 1e12) return '$' + (v/1e12).toFixed(2) + 'T';
+  if(v >= 1e9)  return '$' + (v/1e9).toFixed(2) + 'B';
+  if(v >= 1e6)  return '$' + (v/1e6).toFixed(2) + 'M';
+  if(v >= 1e3)  return '$' + (v/1e3).toFixed(1) + 'K';
+  return '$' + v.toFixed(2);
+}
+function fmtMoneyShort(v){
+  if(v >= 1e12) return '$' + (v/1e12).toFixed(1) + 'T';
+  if(v >= 1e9)  return '$' + (v/1e9).toFixed(1) + 'B';
+  if(v >= 1e6)  return '$' + (v/1e6).toFixed(1) + 'M';
+  return '$' + v.toFixed(0);
+}
+function fmtNum(v){
+  return v.toLocaleString('en-US');
+}
+
+function sliderToFloor(val){
+  if(val <= 0) return 0;
+  const maxExp = Math.log10(1e11);
+  const minExp = Math.log10(1e6);
+  const exp = minExp + (maxExp-minExp) * ((val-1)/99);
+  return Math.pow(10, exp);
+}
+
+/* ===================== FILTERING ===================== */
+function getFiltered(){
+  const q = state.search.trim().toLowerCase();
+  const floor = sliderToFloor(state.mcapFloor);
+  return RAW.filter(d=>{
+    if(d.m < floor) return false;
+    if(state.activeCountries.size > 0 && !state.activeCountries.has(d.c)) return false;
+    if(q && !(d.n.toLowerCase().includes(q) || d.s.toLowerCase().includes(q))) return false;
+    return true;
+  });
+}
+
+/* ===================== SIDEBAR: COUNTRY LIST ===================== */
+const countryListEl = document.getElementById('country-list');
+function renderCountryList(){
+  countryListEl.innerHTML = '';
+  countries.forEach(c=>{
+    const row = document.createElement('div');
+    row.className = 'country-row' + (state.activeCountries.has(c) ? ' active' : '');
+    row.innerHTML = `<span class="country-swatch" style="background:${countryColor[c]}"></span>
+                      <span class="country-name">${c}</span>
+                      <span class="country-count">${countryCounts[c]}</span>`;
+    row.addEventListener('click', ()=>{
+      if(state.activeCountries.has(c)){
+        state.activeCountries.delete(c);
+      } else {
+        state.activeCountries.add(c);
+      }
+      row.classList.toggle('active');
+      renderAll();
+    });
+    countryListEl.appendChild(row);
+  });
+}
+
+/* ===================== TOOLTIP ===================== */
+const tooltip = document.getElementById('tooltip');
+function showTooltip(e, d){
+  if(d.c === '__OTHER__'){
+    tooltip.innerHTML = `<b>${d.n}</b>
+      <div class="tt-sub">${fmtMoney(d.m)} combined valuation · Consolidated market tail</div>`;
+  } else {
+    tooltip.innerHTML = `<b>${d.n}</b> <span style="color:var(--text-faint)">${d.s}</span>
+      <div class="tt-sub">${fmtMoney(d.m)} · Rank #${d.r} · ${d.c}</div>`;
+  }
+  tooltip.style.display = 'block';
+  positionTooltip(e);
+}
+function positionTooltip(e){
+  let x = e.clientX + 16;
+  let y = e.clientY + 16;
+  const tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+  if(x + tw > window.innerWidth - 10) x = e.clientX - tw - 16;
+  if(y + th > window.innerHeight - 10) y = e.clientY - th - 16;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+function hideTooltip(){ tooltip.style.display = 'none'; }
+
+/* ===================== SQUARIFIED TREEMAP ===================== */
+function squarify(items, x, y, w, h){
+  const result = [];
+  if(items.length === 0) return result;
+  const total = items.reduce((a,b)=>a+b.value,0);
+  if(total <= 0) return result;
+
+  function layout(items, x, y, w, h){
+    if(items.length === 0) return;
+    if(items.length === 1){
+      result.push({...items[0], x, y, w, h});
+      return;
+    }
+    let i = 1;
+    while(i < items.length && worst(items.slice(0,i), x, y, w, h) >= worst(items.slice(0,i+1), x, y, w, h)){
+      i++;
+    }
+    const row = items.slice(0, i);
+    const rest = items.slice(i);
+    const rowSum = row.reduce((a,b)=>a+b.value,0);
+    const isHoriz = w >= h;
+
+    let rx = x, ry = y, rw = w, rh = h;
+    if(isHoriz){
+      rw = (rowSum / total) * w;
+    } else {
+      rh = (rowSum / total) * h;
+    }
+
+    let currentOffset = 0;
+    row.forEach(item=>{
+      const frac = item.value / rowSum;
+      if(isHoriz){
+        result.push({...item, x: rx, y: ry + currentOffset, w: rw, h: rh * frac});
+        currentOffset += rh * frac;
+      } else {
+        result.push({...item, x: rx + currentOffset, y: ry, w: rw * frac, h: rh});
+        currentOffset += rw * frac;
+      }
+    });
+
+    if(isHoriz){
+      layout(rest, x + rw, y, w - rw, h);
+    } else {
+      layout(rest, x, y + rh, w, h - rh);
+    }
+  }
+
+  function worst(row, x, y, w, h){
+    const rowSum = row.reduce((a,b)=>a+b.value,0);
+    if(rowSum === 0) return Infinity;
+    const s = w >= h ? h : w;
+    const rMax = Math.max(...row.map(d=>d.value));
+    const rMin = Math.min(...row.map(d=>d.value));
+    return Math.max(
+      (s*s*rMax) / (rowSum*rowSum),
+      (rowSum*rowSum) / (s*s*rMin)
+    );
+  }
+
+  layout(items, x, y, w, h);
+  return result;
+}
+
+const treemapEl = document.getElementById('treemap');
+function renderTreemap(filtered){
+  treemapEl.innerHTML = '';
+  if(filtered.length === 0) return;
+
+  const rect = treemapEl.getBoundingClientRect();
+  const W = rect.width, H = rect.height;
+
+  const MAX_TILES = 120;
+  let items = filtered.slice();
+  items.sort((a,b)=>b.m-a.m);
+  let shown = items;
+  let othersValue = 0, othersCount = 0;
+  if(items.length > MAX_TILES){
+    shown = items.slice(0, MAX_TILES);
+    const rest = items.slice(MAX_TILES);
+    othersValue = rest.reduce((a,b)=>a+b.m,0);
+    othersCount = rest.length;
+  }
+
+  const data = shown.map(d=>({value:d.m, d}));
+  if(othersCount > 0){
+    data.push({value: othersValue, d: {n:`+ ${fmtNum(othersCount)} smaller companies`, s:'', m: othersValue, c:'__OTHER__', r:null, count:othersCount}});
+  }
+
+  data.sort((a,b)=>b.value - a.value);
+
+  const tiles = squarify(data, 0, 0, W, H);
+
+  tiles.forEach(t=>{
+    const d = t.d;
+    const cell = document.createElement('div');
+    const isOther = d.c === '__OTHER__';
+    const area = t.w * t.h;
+    cell.className = 'cell' + ((t.w < 50 || t.h < 26 || area < 1200) ? ' tiny' : '');
+    cell.style.left = t.x + 'px';
+    cell.style.top = t.y + 'px';
+    cell.style.width = Math.max(t.w-2,0) + 'px';
+    cell.style.height = Math.max(t.h-2,0) + 'px';
+    cell.style.background = isOther ? 'var(--panel-2)' : countryColor[d.c];
+    if(isOther){
+      cell.style.border = '1px dashed var(--border-light)';
+      cell.style.justifyContent = 'center';
+      cell.style.alignItems = 'center';
+      cell.style.textAlign = 'center';
+      cell.classList.remove('tiny');
+      cell.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;align-items:center;padding:10px;">
+          <div class="cell-name" style="white-space:normal;font-size:11px;color:var(--text-dim)">${d.n}</div>
+          <div class="cell-sub" style="color:var(--gold);font-size:12px;font-weight:700">${fmtMoney(d.m)} combined</div>
+          <div class="cell-sub" style="color:var(--text-faint)">the long tail</div>
+        </div>`;
+      if(state.selected && state.selected.s === d.s && state.selected.n === d.n) cell.classList.add('selected');
+
+      cell.addEventListener('mouseenter', e=>showTooltip(e,d));
+      cell.addEventListener('mousemove', positionTooltip);
+      cell.addEventListener('mouseleave', hideTooltip);
+      cell.addEventListener('click', ()=> selectCompany(d));
+      treemapEl.appendChild(cell);
+      return;
+    }
+
+    cell.innerHTML = `<div class="cell-name">${d.n}</div><div class="cell-sub">${fmtMoney(d.m)} · ${d.s}</div>`;
+    if(state.selected && state.selected.s === d.s && state.selected.n === d.n) cell.classList.add('selected');
+
+    cell.addEventListener('mouseenter', e=>showTooltip(e,d));
+    cell.addEventListener('mousemove', positionTooltip);
+    cell.addEventListener('mouseleave', hideTooltip);
+    cell.addEventListener('click', ()=> selectCompany(d));
+    treemapEl.appendChild(cell);
+  });
+}
+
+/* ===================== SANKEY RENDER ===================== */
+const sankeyEl = document.getElementById('sankeymap');
+function renderSankey(filtered){
+  sankeyEl.innerHTML = '';
+  if(filtered.length === 0) return;
+
+  const rect = sankeyEl.getBoundingClientRect();
+  const W = rect.width;
+  const H = rect.height || 550;
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+  svg.style.position = 'absolute';
+  svg.style.top = '0';
+  svg.style.left = '0';
+  svg.style.width = '100%';
+  svg.style.height = '100%';
+  svg.style.pointerEvents = 'none';
+  svg.style.zIndex = '1';
+  sankeyEl.appendChild(svg);
+
+  const topM = 30, botM = 30;
+  const usableH = H - topM - botM;
+  const nodeW = 12;
+  const leftX = 160;
+  const rightX = W - 240;
+
+  const countrySums = {};
+  filtered.forEach(d => {
+    countrySums[d.c] = (countrySums[d.c] || 0) + d.m;
+  });
+
+  const sortedCountries = Object.entries(countrySums)
+    .sort((a,b)=>b[1]-a[1]);
+
+  const maxLeft = 8;
+  const topCountries = sortedCountries.slice(0, maxLeft);
+  const otherCountriesSum = sortedCountries.slice(maxLeft)
+    .reduce((a,b)=>a+b[1],0);
+
+  const leftScaleSource = topCountries.reduce((a,b)=>a+b[1],0) + otherCountriesSum;
+  const leftScale = leftScaleSource > 0 ? (usableH - (topCountries.length * 10)) / leftScaleSource : 0;
+
+  const leftNodes = [];
+  let currentLeftY = topM;
+  topCountries.forEach(([name, val]) => {
+    leftNodes.push({ id: name, name, value: val, isOther: false });
+  });
+  if (otherCountriesSum > 0) {
+    leftNodes.push({ id: '__OTHER_COUNTRIES__', name: 'Other Countries', value: otherCountriesSum, isOther: true });
+  }
+
+  leftNodes.forEach(n => {
+    n.height = Math.max(n.value * leftScale, 2);
+    n.y = currentLeftY;
+    n.x = leftX;
+    currentLeftY += n.height + 10;
+  });
+
+  const sortedCompanies = filtered.slice().sort((a,b)=>b.m-a.m);
+  const maxCompanies = 18;
+  const topCompList = sortedCompanies.slice(0, maxCompanies);
+  const otherCompSum = sortedCompanies.slice(maxCompanies).reduce((a,b)=>a+b.m,0);
+
+  const rightScaleSource = topCompList.reduce((a,b)=>a+b.m,0) + otherCompSum;
+  const rightScale = rightScaleSource > 0 ? (usableH - (topCompList.length * 10)) / rightScaleSource : 0;
+
+  const rightNodes = [];
+  let currentRightY = topM;
+  topCompList.forEach(d => {
+    rightNodes.push({ id: d.s, name: d.n, ticker: d.s, value: d.m, isOther: false, d });
+  });
+  if (otherCompSum > 0) {
+    rightNodes.push({ id: '__OTHER_COMPANIES__', name: 'Other Companies', value: otherCompSum, isOther: true });
+  }
+
+  const topCountryNames = topCountries.map(x=>x[0]);
+  rightNodes.forEach(n => {
+    n.height = Math.max(n.value * rightScale, 2);
+    n.y = currentRightY;
+    n.x = rightX;
+    currentRightY += n.height + 10;
+  });
+
+  const links = [];
+  const leftNodeMap = {};
+  leftNodes.forEach(n => { leftNodeMap[n.id] = n; });
+  const rightNodeMap = {};
+  rightNodes.forEach(n => { rightNodeMap[n.id] = n; });
+
+  topCompList.forEach(d => {
+    const countryId = topCountryNames.includes(d.c) ? d.c : '__OTHER_COUNTRIES__';
+    if (leftNodeMap[countryId] && rightNodeMap[d.s]) {
+      links.push({
+        source: countryId,
+        target: d.s,
+        value: d.m,
+        color: countryColor[d.c] || 'var(--text-faint)'
+      });
+    }
+  });
+
+  const otherCompByCountry = {};
+  sortedCompanies.slice(maxCompanies).forEach(d => {
+    const countryId = topCountryNames.includes(d.c) ? d.c : '__OTHER_COUNTRIES__';
+    otherCompByCountry[countryId] = (otherCompByCountry[countryId] || 0) + d.m;
+  });
+  Object.entries(otherCompByCountry).forEach(([countryId, val]) => {
+    if (leftNodeMap[countryId] && rightNodeMap['__OTHER_COMPANIES__']) {
+      links.push({
+        source: countryId,
+        target: '__OTHER_COMPANIES__',
+        value: val,
+        color: countryColor[countryId] || 'var(--text-faint)'
+      });
+    }
+  });
+
+  const sourceOffsets = {};
+  const targetOffsets = {};
+  leftNodes.forEach(n => { sourceOffsets[n.id] = 0; });
+  rightNodes.forEach(n => { targetOffsets[n.id] = 0; });
+
+  links.forEach(l => {
+    const srcNode = leftNodeMap[l.source];
+    const tgtNode = rightNodeMap[l.target];
+    if (!srcNode || !tgtNode) return;
+
+    const val = l.value;
+    const sY = srcNode.y + sourceOffsets[l.source] * leftScale;
+    const tY = tgtNode.y + targetOffsets[l.target] * rightScale;
+    const sH = val * leftScale;
+    const tH = val * rightScale;
+
+    sourceOffsets[l.source] += val;
+    targetOffsets[l.target] += val;
+
+    const x0 = leftX + nodeW;
+    const x1 = rightX;
+    const xm = (x0 + x1) / 2;
+
+    const y0 = sY;
+    const y1 = tY;
+    const y0_b = sY + sH;
+    const y1_b = tY + tH;
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    const dPath = `M ${x0} ${y0} C ${xm} ${y0}, ${xm} ${y1}, ${x1} ${y1} L ${x1} ${y1_b} C ${xm} ${y1_b}, ${xm} ${y0_b}, ${x0} ${y0_b} Z`;
+    path.setAttribute('d', dPath);
+    path.setAttribute('fill', l.color);
+    path.setAttribute('class', 'sankey-link');
+    path.setAttribute('data-source', l.source);
+    path.setAttribute('data-target', l.target);
+    
+    path.addEventListener('mouseenter', (e) => {
+      const targetLabel = tgtNode.isOther ? 'Other Companies' : `${tgtNode.name} (${tgtNode.ticker})`;
+      tooltip.innerHTML = `<b>${srcNode.name}</b> → <b>${targetLabel}</b><br>Market Cap: <span style="color:var(--gold)">${fmtMoney(val)}</span>`;
+      tooltip.style.display = 'block';
+      positionTooltip(e);
+    });
+    path.addEventListener('mousemove', positionTooltip);
+    path.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    
+    svg.appendChild(path);
+  });
+
+  const highlightLinks = (nodeId) => {
+    document.querySelectorAll('.sankey-link').forEach(link => {
+      link.style.fillOpacity = '0.04';
+    });
+    document.querySelectorAll(`.sankey-link[data-source="${nodeId}"], .sankey-link[data-target="${nodeId}"]`).forEach(link => {
+      link.style.fillOpacity = '0.7';
+    });
+  };
+  const resetLinks = () => {
+    document.querySelectorAll('.sankey-link').forEach(link => {
+      link.style.fillOpacity = '';
+    });
+  };
+
+  leftNodes.forEach(n => {
+    const nodeDiv = document.createElement('div');
+    nodeDiv.className = 'sankey-node';
+    nodeDiv.style.left = n.x + 'px';
+    nodeDiv.style.top = n.y + 'px';
+    nodeDiv.style.height = n.height + 'px';
+    nodeDiv.style.background = n.isOther ? '#3a322a' : countryColor[n.name];
+
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'sankey-label left-label';
+    labelDiv.style.top = (n.y + n.height / 2 - 8) + 'px';
+    labelDiv.innerHTML = `<span><b>${n.name}</b><span class="val">${fmtMoneyShort(n.value)}</span></span>`;
+
+    const handleSelect = () => {
+      if (n.isOther) return;
+      if (state.activeCountries.has(n.name)) {
+        state.activeCountries.delete(n.name);
+      } else {
+        state.activeCountries.add(n.name);
+      }
+      renderCountryList();
+      renderAll();
+    };
+
+    [nodeDiv, labelDiv].forEach(el => {
+      el.addEventListener('click', handleSelect);
+      el.addEventListener('mouseenter', (e) => {
+        highlightLinks(n.id);
+        tooltip.innerHTML = `<b>${n.name}</b><br>Combined Cap: <span style="color:var(--gold)">${fmtMoney(n.value)}</span>`;
+        tooltip.style.display = 'block';
+        positionTooltip(e);
+      });
+      el.addEventListener('mousemove', positionTooltip);
+      el.addEventListener('mouseleave', () => {
+        resetLinks();
+        tooltip.style.display = 'none';
+      });
+    });
+
+    sankeyEl.appendChild(nodeDiv);
+    sankeyEl.appendChild(labelDiv);
+  });
+
+  rightNodes.forEach(n => {
+    const nodeDiv = document.createElement('div');
+    nodeDiv.className = 'sankey-node';
+    nodeDiv.style.left = n.x + 'px';
+    nodeDiv.style.top = n.y + 'px';
+    nodeDiv.style.height = n.height + 'px';
+    nodeDiv.style.background = n.isOther ? '#3a322a' : (countryColor[n.d.c] || 'var(--border)');
+
+    const labelDiv = document.createElement('div');
+    labelDiv.className = 'sankey-label right-label';
+    labelDiv.style.top = (n.y + n.height / 2 - 10) + 'px';
+
+    if (state.selected && state.selected.s === n.ticker) {
+      labelDiv.classList.add('selected');
+      nodeDiv.style.borderColor = 'var(--gold)';
+      nodeDiv.style.boxShadow = '0 0 10px rgba(212,184,150,0.5)';
+    }
+
+    if (n.isOther) {
+      labelDiv.innerHTML = `
+        <div class="company-logo-wrapper" style="width: 16px; height:16px;">
+          <div class="company-logo-placeholder" style="background: var(--panel-2); font-size:7px;">+</div>
+        </div>
+        <span><b>${n.name}</b><span class="val">${fmtMoneyShort(n.value)}</span></span>
+      `;
+      
+      [nodeDiv, labelDiv].forEach(el => {
+        el.addEventListener('mouseenter', (e) => {
+          highlightLinks(n.id);
+          tooltip.innerHTML = `<b>${n.name}</b><br>Combined Cap: <span style="color:var(--gold)">${fmtMoney(n.value)}</span>`;
+          tooltip.style.display = 'block';
+          positionTooltip(e);
+        });
+        el.addEventListener('mousemove', positionTooltip);
+        el.addEventListener('mouseleave', () => {
+          resetLinks();
+          tooltip.style.display = 'none';
+        });
+      });
+    } else {
+      const logoUrl = getCompanyLogoUrl(n.d);
+      labelDiv.innerHTML = `
+        <div class="company-logo-wrapper" style="width: 18px; height:18px;">
+          <div class="company-logo-placeholder" style="background: ${countryColor[n.d.c] || 'var(--border)'}; font-size:7.5px;">${n.ticker.slice(0,2)}</div>
+          <img class="company-logo-img" src="${logoUrl}" onerror="this.style.display='none';" />
+        </div>
+        <span><b>${n.ticker}</b> <span style="color:var(--text-faint); font-size:9px;">${n.name.slice(0, 14)}</span><span class="val">${fmtMoneyShort(n.value)}</span></span>
+      `;
+
+      const handleSelect = () => selectCompany(n.d);
+
+      [nodeDiv, labelDiv].forEach(el => {
+        el.addEventListener('click', handleSelect);
+        el.addEventListener('mouseenter', (e) => {
+          highlightLinks(n.id);
+          showTooltip(e, n.d);
+        });
+        el.addEventListener('mousemove', positionTooltip);
+        el.addEventListener('mouseleave', () => {
+          resetLinks();
+          hideTooltip();
+        });
+      });
+    }
+
+    sankeyEl.appendChild(nodeDiv);
+    sankeyEl.appendChild(labelDiv);
+  });
+}
+
+/* ===================== LIST RENDER ===================== */
+const listEl = document.getElementById('listview');
+function renderList(filtered){
+  listEl.innerHTML = '';
+  const head = document.createElement('div');
+  head.className = 'list-row head';
+  head.innerHTML = `<div>RANK</div><div>COMPANY</div><div style="text-align:right">MARKET CAP</div><div style="text-align:right">PRICE</div><div>COUNTRY</div>`;
+  listEl.appendChild(head);
+
+  const items = filtered.slice().sort((a,b)=>b.m-a.m).slice(0, 1000);
+  items.forEach(d=>{
+    const row = document.createElement('div');
+    row.className = 'list-row';
+    if(state.selected && state.selected.s === d.s && state.selected.n === d.n) row.classList.add('selected');
+    const logoUrl = getCompanyLogoUrl(d);
+    row.innerHTML = `
+      <div class="lr-rank">#${d.r}</div>
+      <div class="lr-name">
+        <div class="company-logo-wrapper" style="width:18px; height:18px;">
+          <div class="company-logo-placeholder" style="background: ${countryColor[d.c] || 'var(--border)'}; font-size:7.5px;">${d.s.slice(0,2)}</div>
+          <img class="company-logo-img" src="${logoUrl}" onerror="this.style.display='none';" />
+        </div>
+        <div class="lr-name-text"><b>${d.n}</b><span class="sym">${d.s}</span></div>
+      </div>
+      <div class="lr-mcap">${fmtMoney(d.m)}</div>
+      <div class="lr-price">$${d.p.toFixed(2)}</div>
+      <div class="lr-country"><span class="sw" style="background:${countryColor[d.c]}"></span>${d.c}</div>
+    `;
+    row.addEventListener('click', ()=> selectCompany(d));
+    listEl.appendChild(row);
+  });
+
+  if(items.length === 1000 && filtered.length > 1000){
+    const note = document.createElement('div');
+    note.style.padding = '10px 12px';
+    note.style.color = 'var(--text-faint)';
+    note.style.fontSize = '10px';
+    note.style.letterSpacing = '0.15em';
+    note.textContent = `... showing top 1,000 of ${fmtNum(filtered.length)} · narrow filters to see more`;
+    listEl.appendChild(note);
+  }
+}
+
+/* ===================== DETAIL PANEL ===================== */
+const detailEmpty = document.getElementById('detail-empty');
+const detailCard = document.getElementById('detail-card');
+
+function selectCompany(d){
+  state.selected = d;
+  renderDetail();
+  renderAll(true);
+}
+
+function renderDetail(){
+  const d = state.selected;
+  if(!d){
+    detailEmpty.classList.remove('hidden');
+    detailCard.classList.add('hidden');
+    return;
+  }
+  detailEmpty.classList.add('hidden');
+  detailCard.classList.remove('hidden');
+
+  if(d.c === '__OTHER__'){
+    detailCard.innerHTML = `
+      <div class="dc-rank" style="letter-spacing: 0.05em; font-weight:700;">CONSOLIDATED MARKET TAIL</div>
+      <div style="display: flex; align-items: center; gap: 14px; margin: 10px 0 16px 0;">
+        <div class="company-logo-wrapper large">
+          <div class="company-logo-placeholder" style="background: var(--panel-2); font-size:1.4rem; font-weight:700; border: 1px dashed var(--border-light)">◈</div>
+        </div>
+        <div>
+          <div class="dc-name" style="font-size:17px; line-height: 1.2;">${d.n}</div>
+          <div class="dc-sym" style="color:var(--text-dim)">Consolidated Tail-end</div>
+        </div>
+      </div>
+      <div class="dc-country">Long tail representing smaller market cap firms</div>
+
+      <div class="dc-divider"></div>
+
+      <div class="dc-stat">
+        <div class="l">TOTAL COMBINED VALUATION</div>
+        <div class="v gold">${fmtMoney(d.m)}</div>
+      </div>
+      <div class="dc-stat">
+        <div class="l">COMPANIES IN GROUP</div>
+        <div class="v">${fmtNum(d.count || 0)} companies</div>
+      </div>
+
+      <div class="dc-divider"></div>
+
+      <p style="font-size: 11px; color: var(--text-dim); line-height: 1.5; margin: 8px 0;">
+        This block represents the rest of the companies that fall outside the top 120 companies shown individually on the treemap. This maintains clean visual design and optimal performance.
+      </p>
+    `;
+    return;
+  }
+
+  const pctOfTotal = (d.m / TOTAL_MCAP) * 100;
+  const countryTotal = RAW.filter(x=>x.c===d.c).reduce((a,b)=>a+b.m,0);
+  const pctOfCountry = (d.m / countryTotal) * 100;
+  const countryRank = RAW.filter(x=>x.c===d.c).sort((a,b)=>b.m-a.m).findIndex(x=>x.s===d.s && x.n===d.n) + 1;
+  const countryN = countryCounts[d.c];
+  const logoUrl = getCompanyLogoUrl(d);
+
+  detailCard.innerHTML = `
+    <div class="dc-rank">GLOBAL RANK <b>#${d.r}</b> OF ${fmtNum(RAW.length)}</div>
+    <div style="display: flex; align-items: center; gap: 14px; margin: 4px 0 10px 0;">
+      <div class="company-logo-wrapper large">
+        <div class="company-logo-placeholder" style="background: ${countryColor[d.c] || 'var(--border)'}; font-size:1.5rem; font-weight:700;">${d.s ? d.s.slice(0,2) : d.n.slice(0,2)}</div>
+        <img class="company-logo-img" src="${logoUrl}" onerror="this.style.display='none';" />
+      </div>
+      <div>
+        <div class="dc-name" style="font-size:20px;">${d.n}</div>
+        <div class="dc-sym">${d.s}</div>
+      </div>
+    </div>
+    <div class="dc-country"><span class="sw" style="background:${countryColor[d.c]}"></span>${d.c} · #${countryRank} of ${countryN}</div>
+
+    <div class="dc-divider"></div>
+
+    <div class="dc-stat">
+      <div class="l">MARKET CAPITALIZATION</div>
+      <div class="v gold">${fmtMoney(d.m)}</div>
+    </div>
+    <div class="dc-stat">
+      <div class="l">SHARE PRICE</div>
+      <div class="v">$${d.p.toFixed(2)}</div>
+    </div>
+
+    <div class="dc-divider"></div>
+
+    <div class="dc-bar-wrap">
+      <div class="dc-bar-label"><span>% OF GLOBAL TOTAL SHOWN</span><span>${pctOfTotal < 0.01 ? '<0.01' : pctOfTotal.toFixed(2)}%</span></div>
+      <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.min(Math.max(pctOfTotal*8,1.5),100)}%"></div></div>
+    </div>
+    <div class="dc-bar-wrap">
+      <div class="dc-bar-label"><span>% OF ${d.c.toUpperCase()} TOTAL</span><span>${pctOfCountry.toFixed(1)}%</span></div>
+      <div class="dc-bar-track"><div class="dc-bar-fill" style="width:${Math.min(pctOfCountry,100)}%"></div></div>
+    </div>
+
+    <div class="dc-divider"></div>
+
+    <div class="dc-context">
+      <div class="row"><span>Global Rank</span><span class="v">#${d.r} of ${fmtNum(RAW.length)}</span></div>
+      <div class="row"><span>Country Rank (${d.c})</span><span class="v">#${countryRank} of ${fmtNum(countryN)}</span></div>
+      <div class="row"><span>Share of Country Cap</span><span class="v">${pctOfCountry < 0.01 ? '<0.01' : pctOfCountry.toFixed(2)}%</span></div>
+    </div>
+  `;
+}
+
+/* ===================== LEGEND ===================== */
+function renderLegend(filtered){
+  const legend = document.getElementById('legend');
+  const totals = {};
+  filtered.forEach(d=> totals[d.c] = (totals[d.c]||0) + d.m);
+  const top = Object.entries(totals).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  legend.innerHTML = top.map(([c])=>`<span class="legend-item"><span class="legend-sw" style="background:${countryColor[c]}"></span>${c}</span>`).join('');
+}
+
+/* ===================== STATS ===================== */
+function renderStats(filtered){
+  const total = filtered.reduce((a,b)=>a+b.m,0);
+  document.getElementById('stat-total').textContent = fmtMoney(total);
+  document.getElementById('stat-shown').textContent = fmtNum(filtered.length);
+  const cset = new Set(filtered.map(d=>d.c));
+  document.getElementById('stat-countries').textContent = cset.size;
+  document.getElementById('result-count').textContent = `${fmtNum(filtered.length)} results`;
+  document.getElementById('hdr-count').textContent = fmtNum(filtered.length);
+}
+
+/* ===================== MAIN RENDER ===================== */
+function renderAll(skipSlow){
+  const filtered = getFiltered();
+  renderStats(filtered);
+  renderLegend(filtered);
+
+  if(state.view === 'treemap') renderTreemap(filtered);
+  else if(state.view === 'sankey') renderSankey(filtered);
+  else if(state.view === 'list') renderList(filtered);
+}
+
+/* ===================== EVENT WIRING ===================== */
+document.getElementById('search').addEventListener('input', (e)=>{
+  state.search = e.target.value;
+  renderAll();
+});
+
+document.querySelectorAll('.view-toggle button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.view-toggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    state.view = btn.dataset.view;
+
+    document.getElementById('treemap').classList.toggle('hidden', state.view!=='treemap');
+    document.getElementById('sankeymap').classList.toggle('hidden', state.view!=='sankey');
+    document.getElementById('listview').classList.toggle('hidden', state.view!=='list');
+
+    const labels = {treemap:'TREEMAP', sankey:'SANKEY FLOW', list:'LIST'};
+    const subs = {
+      treemap: 'Tile size ∝ market capitalization · color = country',
+      sankey: 'Flow of market capitalization from Country (left) to Company (right)',
+      list: 'Sorted by market capitalization, descending'
+    };
+    document.getElementById('view-label').textContent = labels[state.view];
+    document.getElementById('view-sub').textContent = subs[state.view];
+
+    renderAll();
+  });
+});
+
+const mcapSlider = document.getElementById('mcap-slider');
+mcapSlider.addEventListener('input', (e)=>{
+  state.mcapFloor = parseInt(e.target.value);
+  const floor = sliderToFloor(state.mcapFloor);
+  document.getElementById('mcap-val').textContent = floor === 0 ? '$0 (any)' : fmtMoney(floor);
+  renderAll();
+});
+
+document.getElementById('reset-btn').addEventListener('click', ()=>{
+  state.search = '';
+  state.mcapFloor = 0;
+  state.activeCountries.clear();
+  state.selected = null;
+  document.getElementById('search').value = '';
+  mcapSlider.value = 0;
+  document.getElementById('mcap-val').textContent = '$0 (any)';
+  renderCountryList();
+  renderDetail();
+  renderAll();
+});
+
+window.addEventListener('resize', ()=> renderAll());
+
+/* ===================== ASYNC INIT ===================== */
+async function init() {
+  try {
+    const res = await fetch('/api/market-data');
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const result = await res.json();
+    
+    RAW = result.data;
+    TOTAL_MCAP = RAW.reduce((a,d)=>a+d.m,0);
+    
+    // Recalculate countryCounts and countries
+    countryCounts = {};
+    RAW.forEach(d => countryCounts[d.c] = (countryCounts[d.c]||0)+1);
+    countries = Object.keys(countryCounts).sort((a,b)=>countryCounts[b]-countryCounts[a]);
+    
+    // Generate countryColor mapping
+    let genIdx = 0;
+    countries.forEach(c=>{
+      let hue, sat, light;
+      if(fixedHues[c] !== undefined){
+        hue = fixedHues[c];
+        sat = 48; light = 46;
+      } else {
+        hue = (genIdx * 137.508 + 60) % 360;
+        sat = 40 + (genIdx % 3) * 10;
+        light = 40 + (genIdx % 4) * 6;
+        genIdx++;
+      }
+      countryColor[c] = `hsl(${hue} ${sat}% ${light}%)`;
+    });
+    
+    // Display fetched timestamp in footer
+    if (result.fetchedAt) {
+      document.getElementById('fetched-time').textContent = `DATA AS OF: ${result.fetchedAt}`;
+    } else {
+      document.getElementById('fetched-time').textContent = '';
+    }
+    
+    // Hide loader and show active view
+    document.getElementById('loader').classList.add('hidden');
+    document.getElementById(state.view).classList.remove('hidden');
+    
+    // Set headers
+    document.getElementById('country-shown-count').textContent = countries.length;
+    
+    // Initial render pass
+    renderCountryList();
+    renderDetail();
+    renderAll();
+  } catch (err) {
+    console.error('Failed to load market data:', err);
+    document.querySelector('.loader-text').innerHTML = `<span style="color:var(--red)">LOAD ERROR: ${err.message}</span>`;
+    const spinner = document.querySelector('.spinner');
+    if (spinner) spinner.style.display = 'none';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
