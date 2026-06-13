@@ -32,7 +32,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="Explore live global stock market capitalizations in real-time. Interactive treemaps, sankey flow diagrams, and lists tracking the world's most valuable companies.">
+<meta name="description" content="Real-time global market capitalization tracker. Explore live stock valuations via interactive treemaps, sankey flow, and lists.">
 <meta name="keywords" content="stock market, market cap, companies, valuation, financial dashboard, live stock tracker, treemap, sankey diagram">
 <meta name="author" content="Tanmay Kalbande">
 <meta property="og:title" content="MARKETCAP // Real-time Global Market Capitalization Explorer">
@@ -1018,7 +1018,7 @@
   <div class="footer">
     <div id="fetched-time" style="color: var(--text-dim);">DATA AS OF: LOADING...</div>
     <div class="legend" id="legend"></div>
-    <div id="footer-right">BY TANMAY KALBANDE · CLICK TILE OR FLOW TO SELECT · HOVER TO INSPECT</div>
+    <div id="footer-right">BY TANMAY KALBANDE</div>
   </div>
 
 </div>
@@ -1310,11 +1310,13 @@ function renderTreemap(filtered){
   items.sort((a,b)=>b.m-a.m);
   let shown = items;
   let othersValue = 0, othersCount = 0;
+  let thresholdVal = 0;
   if(items.length > MAX_TILES){
     shown = items.slice(0, MAX_TILES);
     const rest = items.slice(MAX_TILES);
     othersValue = rest.reduce((a,b)=>a+b.m,0);
     othersCount = rest.length;
+    thresholdVal = shown[shown.length - 1].m;
   }
 
   let tiles = [];
@@ -1329,7 +1331,7 @@ function renderTreemap(filtered){
       y: 0,
       w: othersWidth,
       h: H,
-      d: {n:`+ ${fmtNum(othersCount)} smaller companies`, s:'', m: othersValue, c:'__OTHER__', r:null, count:othersCount}
+      d: {n:`+ ${fmtNum(othersCount)} smaller companies`, s:'', m: othersValue, c:'__OTHER__', r:null, count:othersCount, threshold: thresholdVal}
     });
 
     // 2. Layout individual companies on the right
@@ -1769,7 +1771,10 @@ function renderDetail(){
       <div class="dc-divider"></div>
 
       <p style="font-size: 11px; color: var(--text-dim); line-height: 1.5; margin: 8px 0;">
-        This block represents the rest of the companies that fall outside the top 120 companies shown individually on the treemap. This maintains clean visual design and optimal performance.
+        This block represents the rest of the companies that fall outside the top 120 companies shown individually on the treemap.
+      </p>
+      <p style="font-size: 11px; color: var(--text-dim); line-height: 1.5; margin: 8px 0;">
+        Companies below <b>${d.threshold ? fmtMoney(d.threshold) : '$100B'}</b> market cap are included in this list.
       </p>
     `;
     return;
