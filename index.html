@@ -1203,11 +1203,14 @@ function squarify(items, x, y, w, h){
     const rowSum = row.reduce((a,b)=>a+b.value,0);
     const isHoriz = w >= h;
 
+    const currentTotal = items.reduce((a,b)=>a+b.value,0);
+    if(currentTotal <= 0) return;
+
     let rx = x, ry = y, rw = w, rh = h;
     if(isHoriz){
-      rw = (rowSum / total) * w;
+      rw = (rowSum / currentTotal) * w;
     } else {
-      rh = (rowSum / total) * h;
+      rh = (rowSum / currentTotal) * h;
     }
 
     let currentOffset = 0;
