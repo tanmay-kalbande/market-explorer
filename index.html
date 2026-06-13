@@ -23,6 +23,7 @@
     — Some tired developer at 3 AM.
     
    Check out the source code at: https://github.com/tanmay-kalbande/market-explorer
+   Developed by: Tanmay Kalbande ◈
    
    Happy coding! ◈
    ======================================================================
@@ -33,7 +34,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="Explore live global stock market capitalizations in real-time. Interactive treemaps, sankey flow diagrams, and lists tracking the world's most valuable companies.">
 <meta name="keywords" content="stock market, market cap, companies, valuation, financial dashboard, live stock tracker, treemap, sankey diagram">
-<meta name="author" content="Market Explorer">
+<meta name="author" content="Tanmay Kalbande">
 <meta property="og:title" content="MARKETCAP // Real-time Global Market Capitalization Explorer">
 <meta property="og:description" content="Explore live global stock market capitalizations with an interactive glassmorphic treemap, sankey flow, and search dashboard.">
 <meta property="og:type" content="website">
@@ -97,6 +98,11 @@
     background-size: 72px 72px;
     mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
     -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 80%);
+    transition: opacity 0.3s ease;
+  }
+  .bg-grid.hidden{
+    opacity: 0;
+    pointer-events: none;
   }
   .bg-orb{
     position:absolute; border-radius:50%;
@@ -1012,7 +1018,7 @@
   <div class="footer">
     <div id="fetched-time" style="color: var(--text-dim);">DATA AS OF: LOADING...</div>
     <div class="legend" id="legend"></div>
-    <div id="footer-right">CLICK TILE OR FLOW TO SELECT · HOVER TO INSPECT</div>
+    <div id="footer-right">BY TANMAY KALBANDE · CLICK TILE OR FLOW TO SELECT · HOVER TO INSPECT</div>
   </div>
 
 </div>
@@ -1868,6 +1874,7 @@ document.querySelectorAll('.view-toggle button').forEach(btn=>{
     document.getElementById('treemap').classList.toggle('hidden', state.view!=='treemap');
     document.getElementById('sankeymap').classList.toggle('hidden', state.view!=='sankey');
     document.getElementById('listview').classList.toggle('hidden', state.view!=='list');
+    document.querySelector('.bg-grid').classList.toggle('hidden', state.view === 'list');
 
     const labels = {treemap:'TREEMAP', sankey:'SANKEY FLOW', list:'LIST'};
     const subs = {
